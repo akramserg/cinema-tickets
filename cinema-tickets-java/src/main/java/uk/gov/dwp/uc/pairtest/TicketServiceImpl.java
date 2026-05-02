@@ -10,6 +10,8 @@ import java.util.Map;
 public class TicketServiceImpl implements TicketService {
 
     private static final int MAX_TICKETS = 25;
+    private static final int ADULT_TICKET_PRICE = 25;
+    private static final int CHILD_TICKET_PRICE = 15;
 
     private final TicketPaymentService ticketPaymentService;
     private final SeatReservationService seatReservationService;
@@ -35,6 +37,16 @@ public class TicketServiceImpl implements TicketService {
 
         validateTicketAgePolicy(adults, children, infants);
         validateTotalTicketLimit(totalTickets);
+        int totalAmountToPay = calculateTicketsCost(adults, children);
+
+        ticketPaymentService.makePayment(accountId, totalAmountToPay);
+    }
+
+    /**
+     * Calculates the total cost of tickets. Infant tickets are free.
+     */
+    private int calculateTicketsCost(int adults, int children) {
+        return (adults * ADULT_TICKET_PRICE) + (children * CHILD_TICKET_PRICE);
     }
 
     /**
