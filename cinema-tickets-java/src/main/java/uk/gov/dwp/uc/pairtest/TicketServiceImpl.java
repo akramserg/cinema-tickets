@@ -37,16 +37,26 @@ public class TicketServiceImpl implements TicketService {
 
         validateTicketAgePolicy(adults, children, infants);
         validateTotalTicketLimit(totalTickets);
+
         int totalAmountToPay = calculateTicketsCost(adults, children);
+        int totalSeatsToAllocate = calculateSeatsToReserve(adults, children);
 
         ticketPaymentService.makePayment(accountId, totalAmountToPay);
+        seatReservationService.reserveSeat(accountId, totalSeatsToAllocate);
     }
 
     /**
-     * Calculates the total cost of tickets. Infant tickets are free.
+     * Calculate the total cost of tickets. Infant tickets are free.
      */
     private int calculateTicketsCost(int adults, int children) {
         return (adults * ADULT_TICKET_PRICE) + (children * CHILD_TICKET_PRICE);
+    }
+
+    /**
+     * Calculate the number of seats to reserve.
+     */
+    private int calculateSeatsToReserve(int adults, int children) {
+        return adults + children;
     }
 
     /**
