@@ -8,6 +8,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 public class TicketServiceImpl implements TicketService {
+    private record TicketCountsByType(int adults, int children, int infants) {}
 
     private static final int MAX_TICKETS = 25;
     private static final int ADULT_TICKET_PRICE = 25;
@@ -29,34 +30,28 @@ public class TicketServiceImpl implements TicketService {
         validateAccountId(accountId);
         validateTicketTypeRequests(ticketTypeRequests);
 
-        Map<TicketTypeRequest.Type, Integer> counts = countTicketsByType(ticketTypeRequests);
-        int adults   = counts.getOrDefault(TicketTypeRequest.Type.ADULT,  0);
-        int children = counts.getOrDefault(TicketTypeRequest.Type.CHILD,  0);
-        int infants  = counts.getOrDefault(TicketTypeRequest.Type.INFANT, 0);
-        int totalTickets = adults + children + infants;
+        TicketCountsByType countsPerType = countTicketsByType(ticketTypeRequests);
 
-        validateTicketAgePolicy(adults, children, infants);
-        validateTotalTicketLimit(totalTickets);
+        validateTicketAgePolicy(countsPerType);
+        validateTotalTicketLimit(totalTickets(countsPerType));
 
-        int totalAmountToPay = calculateTicketsCost(adults, children);
-        int totalSeatsToAllocate = calculateSeatsToReserve(adults, children);
+        int totalAmountToPay = calculateTicketsCost(countsPerType);
+        int totalSeatsToAllocate = calculateSeatsToReserve(countsPerType);
 
         ticketPaymentService.makePayment(accountId, totalAmountToPay);
         seatReservationService.reserveSeat(accountId, totalSeatsToAllocate);
     }
 
-    /**
-     * Calculate the total cost of tickets. Infant tickets are free.
-     */
-    private int calculateTicketsCost(int adults, int children) {
-        return (adults * ADULT_TICKET_PRICE) + (children * CHILD_TICKET_PRICE);
+    private int totalTickets(TicketCountsByType countsPerType) {
+        return countsPerType.adults() + countsPerType.children() + countsPerType.infants();
     }
 
-    /**
-     * Calculate the number of seats to reserve.
-     */
-    private int calculateSeatsToReserve(int adults, int children) {
-        return adults + children;
+    private int calculateTicketsCost(TicketCountsByType countsPerType) {
+        return (countsPerType.adults() * ADULT_TICKET_PRICE) + (countsPerType.children() * CHILD_TICKET_PRICE);
+    }
+
+    private int calculateSeatsToReserve(TicketCountsByType countsPerType) {
+        return countsPerType.adults() + countsPerType.children();
     }
 
     /**
@@ -92,11 +87,11 @@ public class TicketServiceImpl implements TicketService {
     /**
      * Validates the ticket age policy
      */
-    private void validateTicketAgePolicy(int adults, int children, int infants) {
-        if (adults == 0) {
+    private void validateTicketAgePolicy(TicketCountsByType countsPerType) {
+        if (countsPerType.adults() == 0) {
             throw new InvalidPurchaseException("At least one Adult ticket must be purchased.");
         }
-        if (infants > adults) {
+        if (countsPerType.infants() > countsPerType.adults()) {
             throw new InvalidPurchaseException("Number of infants cannot exceed the number of adults.");
         }
     }
@@ -113,12 +108,16 @@ public class TicketServiceImpl implements TicketService {
     /**
      * Return the sum of ticket counts per type across all requests.
      */
-    private Map<TicketTypeRequest.Type, Integer> countTicketsByType(TicketTypeRequest[] ticketTypeRequests) {
+    private TicketCountsByType countTicketsByType(TicketTypeRequest[] ticketTypeRequests) {
         Map<TicketTypeRequest.Type, Integer> counts = new EnumMap<>(TicketTypeRequest.Type.class);
         for (TicketTypeRequest request : ticketTypeRequests) {
             counts.merge(request.getTicketType(), request.getNoOfTickets(), Integer::sum);
         }
-        return counts;
+        return new TicketCountsByType(
+            counts.getOrDefault(TicketTypeRequest.Type.ADULT,  0),
+            counts.getOrDefault(TicketTypeRequest.Type.CHILD,  0),
+            counts.getOrDefault(TicketTypeRequest.Type.INFANT, 0)
+        );
     }
 
 }
