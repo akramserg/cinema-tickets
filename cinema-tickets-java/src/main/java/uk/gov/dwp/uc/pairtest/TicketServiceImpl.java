@@ -79,6 +79,9 @@ public class TicketServiceImpl implements TicketService {
      * Validate that a single ticket request is greater than zero.
      */
     private void validateTicketTypeRequest(TicketTypeRequest request) {
+        if (request == null) {
+            throw new InvalidPurchaseException("Ticket request must not be null.");
+        }
         if (request.getNoOfTickets() <= 0) {
             throw new InvalidPurchaseException("Each ticket request must have a quantity greater than zero.");
         }

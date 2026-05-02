@@ -17,7 +17,7 @@ Requires Java 21 and Maven.
 mvn test
 ```
 
-16 tests should pass.
+18 tests should pass.
 
 ## The Journey of building this solution
 
@@ -70,6 +70,15 @@ Ten negative tests were added in four `@Nested` groups — `InvalidAccountId`,
 `InvalidTicketRequests`, `AgePolicyViolations`, `TicketLimitViolations`to assert that each invalid
 input is rejected with the right exception. Total: 16 tests, all passing.
 
+**Step 9: Improvements & fixes**
+Three improvements were made after reviewing the solution:
+
+- **`TicketTypeRequest` fields made `final`.** The specifications state the object *"SHOULD be an immutable object"*. The fields `noOfTickets` and `type` were not `final`, which left the class mutable. I wasn't sure at first if I am allowed to update this class but after further reading the specifications, I made the decision to make both fields are now declared `final`.
+
+- **Null element check added.** `validateTicketTypeRequest` had no null check, causing an unhandled `NullPointerException` if a `null` element was passed inside the array. A null check now throws `InvalidPurchaseException` instead.
+
+- **Two more tests added.** A negative ticket quantity (`-1`) and a `null` element inside the requests array tests were added. Total: 18 tests, all passing.
+
 
 ## Choices
 
@@ -86,7 +95,7 @@ Rather than putting all validation in one block, each rule has its own method: `
 
 ## Assumptions
 
-A few things the spec didn't explicitly cover:
+A few things the specifications didn't explicitly cover:
 
 - **A quantity of zero is invalid.** `validateTicketTypeRequest` rejects any request where `getNoOfTickets() <= 0`. Requesting zero tickets has no meaning.
 

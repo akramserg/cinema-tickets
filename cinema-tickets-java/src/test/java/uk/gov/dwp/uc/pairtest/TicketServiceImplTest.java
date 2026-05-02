@@ -160,6 +160,27 @@ class TicketServiceImplTest {
                 )
             );
         }
+
+        @Test
+        @DisplayName("negative ticket quantity throws InvalidPurchaseException")
+        void negativeQuantity() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L,
+                    new TicketTypeRequest(TicketTypeRequest.Type.ADULT, -1)
+                )
+            );
+        }
+
+        @Test
+        @DisplayName("null element in requests array throws InvalidPurchaseException")
+        void nullRequestElement() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L,
+                    null,
+                    new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)
+                )
+            );
+        }
     }
 
     @Nested
