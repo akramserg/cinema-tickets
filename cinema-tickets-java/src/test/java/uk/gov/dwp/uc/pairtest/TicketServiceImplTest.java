@@ -2,11 +2,14 @@ package uk.gov.dwp.uc.pairtest;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import thirdparty.paymentgateway.TicketPaymentService;
 import thirdparty.seatbooking.SeatReservationService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
+import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -91,5 +94,122 @@ class TicketServiceImplTest {
 
         verify(ticketPaymentService).makePayment(1L, 50);
         verify(seatReservationService).reserveSeat(1L, 2);
+    }
+
+    @Nested
+    @DisplayName("Invalid account ID")
+    class InvalidAccountId {
+
+        @Test
+        @DisplayName("null account ID throws InvalidPurchaseException")
+        void nullAccountId() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(null,
+                    new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)
+                )
+            );
+        }
+
+        @Test
+        @DisplayName("account ID of zero throws InvalidPurchaseException")
+        void zeroAccountId() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(0L,
+                    new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)
+                )
+            );
+        }
+
+        @Test
+        @DisplayName("negative account ID throws InvalidPurchaseException")
+        void negativeAccountId() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(-1L,
+                    new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1)
+                )
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("Invalid ticket requests")
+    class InvalidTicketRequests {
+
+        @Test
+        @DisplayName("null requests array throws InvalidPurchaseException")
+        void nullRequestsArray() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L, (TicketTypeRequest[]) null)
+            );
+        }
+
+        @Test
+        @DisplayName("empty requests array throws InvalidPurchaseException")
+        void emptyRequestsArray() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L)
+            );
+        }
+
+        @Test
+        @DisplayName("ticket quantity of zero throws InvalidPurchaseException")
+        void zeroQuantity() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L,
+                    new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 0)
+                )
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("Age policy violations")
+    class AgePolicyViolations {
+
+        @Test
+        @DisplayName("children only (no adult) throws InvalidPurchaseException")
+        void childrenWithoutAdult() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L,
+                    new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 2)
+                )
+            );
+        }
+
+        @Test
+        @DisplayName("infants only (no adult) throws InvalidPurchaseException")
+        void infantsWithoutAdult() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L,
+                    new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 2)
+                )
+            );
+        }
+
+        @Test
+        @DisplayName("more infants than adults throws InvalidPurchaseException")
+        void moreInfantsThanAdults() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L,
+                    new TicketTypeRequest(TicketTypeRequest.Type.ADULT,  1),
+                    new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 2)
+                )
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("Ticket limit violations")
+    class TicketLimitViolations {
+
+        @Test
+        @DisplayName("26 tickets (one over max) throws InvalidPurchaseException")
+        void twentySixTickets() {
+            assertThrows(InvalidPurchaseException.class, () ->
+                ticketService.purchaseTickets(1L,
+                    new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 26)
+                )
+            );
+        }
     }
 }
